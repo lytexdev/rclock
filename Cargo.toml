@@ -1,0 +1,10 @@
+[package]
+name = "rclock"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = "4.5.26"
+ctrlc = "3.4.5"
+crossterm = "0.28.1"
+figlet-rs = "0.1.5"
