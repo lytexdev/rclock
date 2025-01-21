@@ -10,7 +10,6 @@ use figlet_rs::FIGfont;
 use chrono::{Local, NaiveTime};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
-
 fn display_big_text<W: Write>(stdout: &mut W, text: &str, color: Option<Color>, font: &FIGfont) {
     let big_text = font.convert(text).unwrap();
 
@@ -83,12 +82,52 @@ fn start_alarm(duration: Duration, color: Option<Color>) {
     }
 
     display_big_text(&mut stdout, "ALARM UP!", color, &font);
+
+    // Play a sound (cross-platform)
+    if cfg!(target_os = "windows") {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", "/min", "powershell", "[console]::beep(800,800)"])
+            .status();
+    } else {
+        let _ = std::process::Command::new("sh").arg("-c").arg("echo -e '\\a'").status();
+    }
+
     while running.load(Ordering::SeqCst) {
         thread::sleep(Duration::from_millis(100));
     }
 
     stdout.execute(terminal::LeaveAlternateScreen).unwrap();
     println!("ALARM! Time's up!");
+}
+
+fn start_stopwatch(color: Option<Color>) {
+    let font = FIGfont::standard().unwrap();
+    let mut stdout = io::stdout();
+    stdout.execute(terminal::EnterAlternateScreen).unwrap();
+    stdout.execute(cursor::Hide).unwrap();
+
+    let start_time = Instant::now();
+    let running = Arc::new(AtomicBool::new(true));
+    let handler_running = Arc::clone(&running);
+
+    ctrlc::set_handler(move || {
+        handler_running.store(false, Ordering::SeqCst);
+    }).expect("Error setting Ctrl-C handler");
+
+    while running.load(Ordering::SeqCst) {
+        let elapsed = start_time.elapsed();
+        let time_string = format!("{:02}:{:02}:{:02}.{:03}", 
+            elapsed.as_secs() / 3600, 
+            (elapsed.as_secs() % 3600) / 60, 
+            elapsed.as_secs() % 60, 
+            elapsed.subsec_millis());
+
+        display_big_text(&mut stdout, &time_string, color, &font);
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    stdout.execute(cursor::Show).unwrap();
+    stdout.execute(terminal::LeaveAlternateScreen).unwrap();
 }
 
 fn main() {
@@ -123,6 +162,7 @@ fn main() {
                         .value_parser(["red", "green", "blue", "yellow", "cyan", "magenta", "white"]),
                 ),
         )
+        .arg_required_else_help(true) // Ensure help is displayed if no arguments are provided
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("stopwatch") {
@@ -136,12 +176,7 @@ fn main() {
             "white" => Color::White,
             _ => Color::White,
         });
-
-        let font = FIGfont::standard().unwrap();
-        let mut stdout = io::stdout();
-        stdout.execute(terminal::EnterAlternateScreen).unwrap();
-        display_big_text(&mut stdout, "STOPWATCH", color, &font);
-        stdout.execute(terminal::LeaveAlternateScreen).unwrap();
+        start_stopwatch(color);
     }
 
     if let Some(matches) = matches.subcommand_matches("alarm") {
