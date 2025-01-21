@@ -23,10 +23,34 @@ The binary will be available in `./target/release/rclock`.
 
 ## Usage
 
-### Start stopwatch
+### Stopwatch
+To start the stopwatch:
 ```bash
-./target/release/rclock stopwatch
+rclock stopwatch
 ```
+
+With color options:
+```bash
+rclock stopwatch --color red
+```
+Available colors: `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`, `white`.
+
+### Alarm
+To set an alarm in seconds:
+```bash
+rclock alarm 60
+```
+
+To set an alarm at a specific time (HH:MM format):
+```bash
+rclock alarm 14:30
+```
+
+With color options:
+```bash
+rclock alarm 60 --color blue
+```
+The alarm will display a big "ALARM UP!" text and play a sound when triggered. Press `Ctrl+C` to exit.
 
 ## License
 This project is licensed under MIT. See the [LICENSE](LICENSE) file for details.
