@@ -83,7 +83,6 @@ fn start_alarm(duration: Duration, color: Option<Color>) {
 
     display_big_text(&mut stdout, "ALARM UP!", color, &font);
 
-    // Play a sound (cross-platform)
     if cfg!(target_os = "windows") {
         let _ = std::process::Command::new("cmd")
             .args(["/C", "start", "/min", "powershell", "[console]::beep(800,800)"])
@@ -130,6 +129,56 @@ fn start_stopwatch(color: Option<Color>) {
     stdout.execute(terminal::LeaveAlternateScreen).unwrap();
 }
 
+fn start_pomodoro(work_minutes: u64, break_minutes: u64, color: Option<Color>) {
+    let font = FIGfont::standard().unwrap();
+    let mut stdout = io::stdout();
+    stdout.execute(terminal::EnterAlternateScreen).unwrap();
+
+    let work_duration = Duration::from_secs(work_minutes * 60);
+    let break_duration = Duration::from_secs(break_minutes * 60);
+
+    println!("Starting Pomodoro timer: {} minutes work, {} minutes break.", work_minutes, break_minutes);
+
+    let start_time = Instant::now();
+    while start_time.elapsed() < work_duration {
+        let remaining = work_duration - start_time.elapsed();
+        let time_string = format!("Work: {:02}:{:02}", 
+            remaining.as_secs() / 60, 
+            remaining.as_secs() % 60);
+
+        display_big_text(&mut stdout, &time_string, color, &font);
+        thread::sleep(Duration::from_millis(500));
+    }
+
+    display_big_text(&mut stdout, "BREAK TIME!", color, &font);
+
+    if cfg!(target_os = "windows") {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", "/min", "powershell", "[console]::beep(800,800)"])
+            .status();
+    } else {
+        let _ = std::process::Command::new("sh").arg("-c").arg("echo -e '\\a'").status();
+    }
+
+    thread::sleep(Duration::from_secs(3)); // wait for 3 seconds before break countdown
+
+    let break_start_time = Instant::now();
+    while break_start_time.elapsed() < break_duration {
+        let remaining = break_duration - break_start_time.elapsed();
+        let time_string = format!("Break: {:02}:{:02}", 
+            remaining.as_secs() / 60, 
+            remaining.as_secs() % 60);
+
+        display_big_text(&mut stdout, &time_string, color, &font);
+        thread::sleep(Duration::from_millis(500));
+    }
+
+    display_big_text(&mut stdout, "POMODORO DONE!", color, &font);
+
+    stdout.execute(terminal::LeaveAlternateScreen).unwrap();
+    println!("Pomodoro session complete!");
+}
+
 fn main() {
     let matches = Command::new("Rclock")
         .version("0.1")
@@ -162,7 +211,34 @@ fn main() {
                         .value_parser(["red", "green", "blue", "yellow", "cyan", "magenta", "white"]),
                 ),
         )
-        .arg_required_else_help(true) // Ensure help is displayed if no arguments are provided
+        .subcommand(
+            Command::new("pomodoro")
+                .about("Starts a Pomodoro timer with work and break intervals")
+                .arg(
+                    Arg::new("work")
+                        .short('w')
+                        .long("work")
+                        .help("Work duration in minutes")
+                        .required(true)
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("break")
+                        .short('b')
+                        .long("break")
+                        .help("Break duration in minutes")
+                        .required(true)
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("color")
+                        .short('c')
+                        .long("color")
+                        .help("Sets the color for the output")
+                        .value_parser(["red", "green", "blue", "yellow", "cyan", "magenta", "white"]),
+                ),
+        )
+        .arg_required_else_help(true)
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("stopwatch") {
@@ -200,5 +276,22 @@ fn main() {
                 eprintln!("Invalid time format. Use seconds or HH:MM.");
             }
         }
+    }
+
+    if let Some(matches) = matches.subcommand_matches("pomodoro") {
+        let work = *matches.get_one::<u64>("work").unwrap();
+        let break_time = *matches.get_one::<u64>("break").unwrap();
+        let color = matches.get_one::<String>("color").map(|c| match c.as_str() {
+            "red" => Color::Red,
+            "green" => Color::Green,
+            "blue" => Color::Blue,
+            "yellow" => Color::Yellow,
+            "cyan" => Color::Cyan,
+            "magenta" => Color::Magenta,
+            "white" => Color::White,
+            _ => Color::White,
+        });
+
+        start_pomodoro(work, break_time, color);
     }
 }
