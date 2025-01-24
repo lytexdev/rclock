@@ -40,14 +40,24 @@ pub fn get_cli_matches() -> clap::ArgMatches {
                         .short('w')
                         .long("work")
                         .help("Work duration in minutes")
-                        .required(true),
+                        .required(true)
+                        .value_parser(clap::value_parser!(u64)),
                 )
                 .arg(
                     Arg::new("break")
                         .short('b')
                         .long("break")
                         .help("Break duration in minutes")
-                        .required(true),
+                        .required(true)
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("repeats")
+                        .short('r')
+                        .long("repeats")
+                        .help("Number of Pomodoro cycles to repeat")
+                        .value_parser(clap::value_parser!(u64))
+                        .default_value("1"),
                 )
                 .arg(
                     Arg::new("color")
@@ -55,7 +65,8 @@ pub fn get_cli_matches() -> clap::ArgMatches {
                         .long("color")
                         .help("Sets the color for the output")
                         .value_parser(["red", "green", "blue", "yellow", "cyan", "magenta", "white"]),
-                ),
+                )
+
         )
         .arg_required_else_help(true)
         .get_matches()
