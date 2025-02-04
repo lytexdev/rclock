@@ -1,7 +1,10 @@
 [package]
 name = "rclock"
 version = "0.1.0"
+authors = ["lytexdev <immanuel@lytex.dev>"]
 edition = "2021"
+description = "Command-line stopwatch, alarm clock, and Pomodoro timer."
+license = "MIT"
 
 [dependencies]
 clap = "4.5.26"
